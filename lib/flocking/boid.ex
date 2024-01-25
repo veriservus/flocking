@@ -21,6 +21,24 @@ defmodule Flocking.Boid do
     acceleration: Vector2
   }
 
+  defp rand_vel() do
+    Enum.random(-1..1)
+  end
+
+  def make_boids(boid_count) do
+    width = U.max_width()
+    height = U.max_height()
+
+    Enum.map(1..boid_count, fn _ ->
+      %Boid{
+        id: System.unique_integer([:monotonic]),
+        pos: {:rand.uniform(width), :rand.uniform(height)},
+        velocity: {rand_vel(), rand_vel()},
+        acceleration: {0, 0}
+      }
+    end)
+  end
+
   def apply_force(%{acceleration: acc}=boid, force) do
     %{boid | acceleration: Vector2.add(acc, force)}
   end
@@ -54,7 +72,7 @@ defmodule Flocking.Boid do
         |> Vector2.normalize()
         |> Vector2.mul(@max_speed)
         |> Vector2.sub(boid_vel)
-        |> vector_limit(@max_force)
+        |> U.vector_limit(@max_force)
       true ->
         steer
     end
@@ -79,7 +97,7 @@ defmodule Flocking.Boid do
       |> Vector2.normalize()
       |> Vector2.mul(@max_speed)
       |> Vector2.sub(velocity)
-      |> vector_limit(@max_force)
+      |> U.vector_limit(@max_force)
     else
       {0, 0}
     end
@@ -100,34 +118,19 @@ defmodule Flocking.Boid do
     if count > 0 do
       sum
       |> Vector2.div(count)
-      |> vector_seek(boid)
+      |> seek(boid)
     else
       {0, 0}
     end
   end
 
-  def vector_seek(target, %{pos: position, velocity: vel}) do
-    Vector2.sub(target, position)
-    |> Vector2.normalize()
-    |> Vector2.mul(@max_speed)
-    |> Vector2.sub(vel)
-    |> vector_limit(@max_force)
-  end
-
-  def vector_limit(vector, scalar) do
-    magSq = Vector2.length_squared(vector)
-    cond do
-      magSq > scalar * scalar ->
-        vector
-          |> Vector2.div(Vector2.length(vector))
-          |> Vector2.mul(scalar)
-      true -> vector
-    end
+  def seek(target, %{pos: position, velocity: velocity}) do
+    U.vector_seek(target, position, velocity, max_speed: @max_speed, max_force: @max_force)
   end
 
   def update(%{pos: p, velocity: v, acceleration: a} = boid) do
     v = Vector2.add(v, a)
-    v = vector_limit(v, @max_speed)
+    v = U.vector_limit(v, @max_speed)
     p = Vector2.add(p, v)
     a = Vector2.mul(a, 0)
 

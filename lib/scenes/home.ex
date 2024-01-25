@@ -6,44 +6,19 @@ defmodule Flocking.Scene.Home do
 
   # import Scenic.Components
 
-  alias Flocking.Utils, as: U
+  # alias Flocking.Utils, as: U
   alias Flocking.Boid
 
   @boid_count 120
 
   def init(scene, _param, _opts) do
-
     scene =
       scene
-      |> assign(graph: Graph.build(), boids: make_boids())
+      |> assign(graph: Graph.build(), boids: Boid.make_boids(@boid_count))
 
     tick()
 
     {:ok, scene}
-  end
-
-  @spec handle_input(any(), any(), any()) :: {:noreply, any()}
-  def handle_input(event, _context, scene) do
-    Logger.info("Received event: #{inspect(event)}")
-    {:noreply, scene}
-  end
-
-  defp rand_vel() do
-    Enum.random(-1..1)
-  end
-
-  defp make_boids() do
-    width = U.max_width()
-    height = U.max_height()
-
-    Enum.map(1..@boid_count, fn _ ->
-      %Boid{
-        id: System.unique_integer([:monotonic]),
-        pos: {:rand.uniform(width), :rand.uniform(height)},
-        velocity: {rand_vel(), rand_vel()},
-        acceleration: {0, 0}
-      }
-    end)
   end
 
   defp tick() do
