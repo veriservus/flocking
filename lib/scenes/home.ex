@@ -3,10 +3,6 @@ defmodule Flocking.Scene.Home do
   require Logger
 
   alias Scenic.Graph
-
-  # import Scenic.Components
-
-  # alias Flocking.Utils, as: U
   alias Flocking.Boid
 
   @boid_count 120

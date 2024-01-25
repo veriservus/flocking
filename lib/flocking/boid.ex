@@ -21,10 +21,6 @@ defmodule Flocking.Boid do
     acceleration: Vector2
   }
 
-  defp rand_vel() do
-    Enum.random(-1..1)
-  end
-
   def make_boids(boid_count) do
     width = U.max_width()
     height = U.max_height()
@@ -33,17 +29,75 @@ defmodule Flocking.Boid do
       %Boid{
         id: System.unique_integer([:monotonic]),
         pos: {:rand.uniform(width), :rand.uniform(height)},
-        velocity: {rand_vel(), rand_vel()},
+        velocity: rand_velocity(),
         acceleration: {0, 0}
       }
     end)
   end
 
-  def apply_force(%{acceleration: acc}=boid, force) do
+  def flock(boid, boids) do
+    s = separate(boids, boid)
+    a = align(boids, boid)
+    c = cohere(boids, boid)
+
+    s = Vector2.mul(s, 1.5)
+    a = Vector2.mul(a, 1.0)
+    c = Vector2.mul(c, 1.0)
+
+    boid
+      |> apply_force(s)
+      |> apply_force(a)
+      |> apply_force(c)
+
+  end
+
+  def update(%{pos: p, velocity: v, acceleration: a} = boid) do
+    v = Vector2.add(v, a)
+    v = U.vector_limit(v, @max_speed)
+    p = Vector2.add(p, v)
+    a = Vector2.mul(a, 0)
+
+    %{boid | pos: p, velocity: v, acceleration: a}
+  end
+
+  def draw(%Boid{id: id, pos: pos, velocity: {velx, vely}}, graph) do
+    rot = :math.atan2(velx, vely)
+    triangle(graph, {{0, 0}, {10, 40}, {20, 0}}, id: id, stroke: {1, :white}, fill: :white, translate: pos, rotate: -rot)
+  end
+
+  def wrap(%Boid{pos: {x, y}} = boid) do
+    max_x = U.max_width()
+    max_y = U.max_height()
+
+    new_x = cond do
+      x > max_x -> 0
+      x < 0 -> max_x
+      true -> x
+    end
+
+    new_y = cond do
+      y > max_y -> 0
+      y < 0 -> max_y
+      true -> y
+    end
+
+    %{boid | pos: {new_x, new_y}}
+  end
+
+  defp rand_velocity() do
+    vx = Enum.random(-1..1)
+    vy = case vx do
+      0 -> Enum.random([-1, 1])
+      _ -> Enum.random(-1..1)
+    end
+    {vx, vy}
+  end
+
+  defp apply_force(%{acceleration: acc}=boid, force) do
     %{boid | acceleration: Vector2.add(acc, force)}
   end
 
-  def separate(boids, %{pos: boid_pos, velocity: boid_vel}) do
+  defp separate(boids, %{pos: boid_pos, velocity: boid_vel}) do
     desired_separation = 40
 
     {steer, count} = boids
@@ -78,7 +132,7 @@ defmodule Flocking.Boid do
     end
   end
 
-  def align(boids, %{pos: boid_pos, velocity: velocity}) do
+  defp align(boids, %{pos: boid_pos, velocity: velocity}) do
     neighbour_dist = 60
 
     {sum, count} = Enum.reduce(boids, {{0,0}, 0}, fn %{pos: pos, velocity: vel}, {sum, count} ->
@@ -103,7 +157,7 @@ defmodule Flocking.Boid do
     end
   end
 
-  def cohere(boids, %{pos: boid_pos} = boid) do
+  defp cohere(boids, %{pos: boid_pos} = boid) do
     neighbour_dist = 60
 
     {sum, count} = Enum.reduce(boids, {{0,0}, 0}, fn %{pos: pos}, {sum, count} ->
@@ -124,56 +178,7 @@ defmodule Flocking.Boid do
     end
   end
 
-  def seek(target, %{pos: position, velocity: velocity}) do
+  defp seek(target, %{pos: position, velocity: velocity}) do
     U.vector_seek(target, position, velocity, max_speed: @max_speed, max_force: @max_force)
-  end
-
-  def update(%{pos: p, velocity: v, acceleration: a} = boid) do
-    v = Vector2.add(v, a)
-    v = U.vector_limit(v, @max_speed)
-    p = Vector2.add(p, v)
-    a = Vector2.mul(a, 0)
-
-    %{boid | pos: p, velocity: v, acceleration: a}
-  end
-
-  def flock(boid, boids) do
-    s = Boid.separate(boids, boid)
-    a = Boid.align(boids, boid)
-    c = Boid.cohere(boids, boid)
-
-    s = Vector2.mul(s, 1.5)
-    a = Vector2.mul(a, 1.0)
-    c = Vector2.mul(c, 1.0)
-
-    boid
-      |> Boid.apply_force(s)
-      |> Boid.apply_force(a)
-      |> Boid.apply_force(c)
-
-  end
-
-  def draw(%Boid{id: id, pos: pos, velocity: {velx, vely}}, graph) do
-    rot = :math.atan2(velx, vely)
-    triangle(graph, {{0, 0}, {10, 40}, {20, 0}}, id: id, stroke: {1, :white}, fill: :white, translate: pos, rotate: -rot)
-  end
-
-  def wrap(%Boid{pos: {x, y}} = boid) do
-    max_x = U.max_width()
-    max_y = U.max_height()
-
-    new_x = cond do
-      x > max_x -> 0
-      x < 0 -> max_x
-      true -> x
-    end
-
-    new_y = cond do
-      y > max_y -> 0
-      y < 0 -> max_y
-      true -> y
-    end
-
-    %{boid | pos: {new_x, new_y}}
   end
 end
