@@ -1,4 +1,10 @@
-Readme text goes here
+# Flocking
 
+Just a play - flocking algorithm with Elixir and [Scenic](https://github.com/ScenicFramework/scenic)
 
-From template
+## running
+
+```bash
+mix deps.get
+mix scenic.run
+```
